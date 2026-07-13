@@ -16,47 +16,74 @@ assets/          — 图片等静态资源
 
 ## 报告目录结构
 
-所有报告按**公司名**建文件夹，公司相关的所有报告放在对应文件夹内：
+所有报告按**分类目录**存放：
 
 ```
 reports/
-├── AI产业研究/              — AI产业链全景研究（置顶）
-│   ├── AI五层蛋糕-产业全景研究-20260605.md
-│   └── AI五层蛋糕-公众号-20260605.md
-├── 腾讯/                    — 腾讯所有研究报告
-│   ├── 腾讯-research-20260408.md
-│   ├── 腾讯-earnings-2025Q4.md
-│   ├── 腾讯-management-20260409.md
-│   └── 腾讯-thesis.md
-├── 拼多多/                  — 拼多多所有研究报告
-├── 泡泡玛特/                — 泡泡玛特所有研究报告
-├── 核电-industry-20260409.md — 行业报告放根目录
-├── AI算力-funnel-20260509.md  — 漏斗筛选报告放根目录
-├── AI-轮动判断-20260509.md    — 主题级综合判断报告放根目录
-├── portfolio-latest.md       — 组合报告放根目录
-└── 多公司对比-checklist-20260408.md — 多公司报告放根目录
+├── 公司研究/          # 所有公司级深度研究（含研究报告、财报、管理层、论文等）
+│   └── {公司名}/
+│       ├── {公司名}-research-{日期}.md            ← investment-research
+│       ├── {公司名}-checklist-{日期}.md            ← investment-checklist
+│       ├── {公司名}-earnings-{期间}.md              ← earnings-review / earnings-team
+│       ├── {公司名}-management-{日期}.md            ← management-deep-dive
+│       ├── {公司名}-private-{日期}.md               ← private-company-research
+│       ├── {公司名}-thesis.md                      ← thesis-tracker
+│       ├── {公司名}-thesis-{日期}.md                ← thesis-drift 快照
+│       ├── {公司名}-team-{日期}.md                  ← investment-team（含多文件）
+│       ├── {公司名}-公众号-{日期}.md                ← wechat-article
+│       └── 《看懂{公司名}》/                        ← deep-company-series
+│
+├── 行业分析/          # 行业级全景、漏斗筛选、技术综述
+│   ├── {行业名}-industry-{日期}.md                 ← industry-research
+│   ├── {行业名}-funnel-{日期}.md                   ← industry-funnel
+│   ├── 大模型技术/                                  ← 技术科普综述
+│   ├── 白酒周期/
+│   └── AI产业/
+│
+├── 跨公司对比/        # 跨公司对比报告（XXvsYY、多公司筛选等）
+├── 投资理念/          # 投资方法论、大师思想（巴菲特镜子测试、段永平vs李录等）
+├── 阅读扩展/          # 播客笔记、读书笔记、政策解读
+├── 组合管理/          # 组合管理
+│   └── portfolio-latest.md                         ← portfolio-review
+├── 舆情扫描/          # 新闻事件归因
+│   └── {公司名}/
+│       └── {公司名}-news-{日期}.md                 ← news-pulse
+├── 供应链瓶颈/        # 瓶颈地图（原 bottleneck-map，保留 daily/ 子目录）
+├── 筛选池/            # 晨星等数据驱动的筛选结果
+│   ├── 晨星深度低估/
+│   └── 晨星估值筛选/
+├── 召回池/            # 各市场/主题的候选池
+└── 宏观分析/          # 宏观利率、房产研究
 ```
 
 ## 报告命名规范
 
 | Skill | 文件命名格式 | 示例 |
 |------|---------|------|
-| /investment-team | `{公司名}/` 目录内含4个视角+最终报告 | `reports/拼多多/最终报告.md` |
-| /investment-research | `{公司名}-research-{YYYYMMDD}.md` | `reports/腾讯/腾讯-research-20260408.md` |
-| /investment-checklist | `{公司名}-checklist-{YYYYMMDD}.md` | `reports/腾讯/腾讯-checklist-20260408.md` |
-| /industry-research | `{行业名}-industry-{YYYYMMDD}.md`（根目录） | `reports/核电-industry-20260409.md` |
-| /industry-funnel | `{行业名}-funnel-{YYYYMMDD}.md`（根目录） | `reports/AI算力-funnel-20260509.md` |
-| /private-company-research | `{公司名}-private-{YYYYMMDD}.md` | `reports/字节跳动/字节跳动-private-20260408.md` |
-| /earnings-review | `{公司名}-earnings-{期间}.md` | `reports/腾讯/腾讯-earnings-2025Q4.md` |
-| /earnings-team | `{公司名}/` 目录内含4个大师视角+研究底稿+公众号文章+读者评审 | `reports/腾讯/腾讯-earnings-2025Q4.md`（公众号定稿） |
-| /thesis-tracker | `{公司名}-thesis.md`（长期维护） | `reports/腾讯/腾讯-thesis.md` |
-| /portfolio-review | `portfolio-latest.md`（根目录，持续更新） | `reports/portfolio-latest.md` |
-| /management-deep-dive | `{公司名}-management-{YYYYMMDD}.md` | `reports/腾讯/腾讯-management-20260409.md` |
+| /investment-team | `公司研究/{公司名}/` 目录内含4个视角+最终报告 | `公司研究/拼多多/最终报告.md` |
+| /investment-research | `公司研究/{公司名}/{公司名}-research-{YYYYMMDD}.md` | `公司研究/腾讯/腾讯-research-20260408.md` |
+| /investment-checklist | `公司研究/{公司名}/{公司名}-checklist-{YYYYMMDD}.md` | `公司研究/腾讯/腾讯-checklist-20260408.md` |
+| /industry-research | `行业分析/{行业名}-industry-{YYYYMMDD}.md` | `行业分析/核电-industry-20260409.md` |
+| /industry-funnel | `行业分析/{行业名}-funnel-{YYYYMMDD}.md` | `行业分析/AI算力-funnel-20260509.md` |
+| /private-company-research | `公司研究/{公司名}/{公司名}-private-{YYYYMMDD}.md` | `公司研究/字节跳动/字节跳动-private-20260408.md` |
+| /earnings-review | `公司研究/{公司名}/{公司名}-earnings-{期间}.md` | `公司研究/腾讯/腾讯-earnings-2025Q4.md` |
+| /earnings-team | `公司研究/{公司名}/` 目录内含4个大师视角+研究底稿+公众号文章+读者评审 | `公司研究/腾讯/腾讯-earnings-2025Q4.md`（公众号定稿） |
+| /thesis-tracker | `公司研究/{公司名}/{公司名}-thesis.md`（长期维护） | `公司研究/腾讯/腾讯-thesis.md` |
+| /thesis-drift | `公司研究/{公司名}/{公司名}-thesis-{YYYYMMDD}.md`（快照） | `公司研究/腾讯/腾讯-thesis-20260601.md` |
+| /portfolio-review | `组合管理/portfolio-latest.md`（持续更新） | `组合管理/portfolio-latest.md` |
+| /management-deep-dive | `公司研究/{公司名}/{公司名}-management-{YYYYMMDD}.md` | `公司研究/腾讯/腾讯-management-20260409.md` |
+| /news-pulse | `舆情扫描/{公司名}/{公司名}-news-{YYYYMMDD}.md` | `舆情扫描/腾讯/腾讯-news-20260409.md` |
+| /deep-company-series | `公司研究/{公司名}/《看懂{公司名}》/` | `公司研究/腾讯/《看懂腾讯》/` |
+| /bottleneck-hunter | `供应链瓶颈/` 目录下 | `供应链瓶颈/master-map.md` |
+| /wechat-article（公司分析类） | `公司研究/{公司名}/{公司名}-公众号-{YYYYMMDD}.md` | `公司研究/腾讯/腾讯-公众号-20260616.md` |
+| /wechat-article（行业分析类） | `行业分析/公众号-{行业关键词}-{YYYYMMDD}.md` | `行业分析/公众号-AI五层蛋糕-20260605.md` |
+| /wechat-article（投资理念类） | `投资理念/公众号-{主题关键词}-{YYYYMMDD}.md` | `投资理念/公众号-凯利公式-20260616.md` |
+| /wechat-article（阅读扩展类） | `阅读扩展/公众号-{主题关键词}-{YYYYMMDD}.md` | `阅读扩展/公众号-播客笔记-20260616.md` |
 
 ## /investment-team 文件结构
 
 ```
-reports/{公司名}/
+reports/公司研究/{公司名}/
 ├── README.md                         — 研究框架概览+核心结论
 ├── 01-商业模式分析-段永平视角.md
 ├── 02-财务估值分析-巴菲特视角.md
