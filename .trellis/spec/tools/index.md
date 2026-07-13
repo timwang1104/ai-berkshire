@@ -6,7 +6,10 @@
 
 ## 文件结构
 
-所有工具位于 `tools/*.py`，使用 Python 3 标准库（零外部依赖）。
+所有工具位于 `tools/*.py`，优先使用 Python 3 标准库（零外部依赖原则）。
+
+> ⚠️ **例外**：`xueqiu_scraper.py` 由于需要浏览器自动化和 Cookie 管理，使用 `playwright` 外部依赖。
+> 详情见 `CLAUDE.md` 虚拟环境 section。所有其他工具必须保持零外部依赖。
 
 ### 标准执行入口
 
