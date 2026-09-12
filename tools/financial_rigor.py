@@ -58,8 +58,13 @@ def fmt_number(d: Decimal, unit: str = "") -> str:
 # 1. Market Cap Verification (股价×总股本 vs 报告市值)
 # ---------------------------------------------------------------------------
 
-def verify_market_cap(price, shares, reported_cap, currency=""):
-    """Verify market cap = price × shares, compare with reported value."""
+def verify_market_cap(price, shares, reported_cap, currency="", shares_src="", asof=""):
+    """Verify market cap = price × shares, compare with reported value.
+
+    shares_src: 股本来源凭证（≥2 独立来源，分号分隔，如 "新浪;stockanalysis"）。
+    asof:       股本/股价数据日期 YYYY-MM-DD。
+    两者仅为凭证记录，拼进输出供报告直接引用；不影响验算逻辑。
+    """
     p = exact(price)
     s = exact(shares)
     r = exact(reported_cap)
@@ -75,6 +80,10 @@ def verify_market_cap(price, shares, reported_cap, currency=""):
     print(f"  计算市值:           {fmt_number(calculated)} {currency}")
     print(f"  报告市值:           {fmt_number(r)} {currency}")
     print(f"  偏差:               {deviation:.2f}%")
+    if shares_src:
+        print(f"  股本来源:           {shares_src}")
+    if asof:
+        print(f"  数据日期:           {asof}")
     print()
 
     if deviation > 5:
@@ -385,6 +394,8 @@ Examples:
     mc.add_argument("--shares", type=float, required=True, help="总股本")
     mc.add_argument("--reported", type=float, required=True, help="报告市值")
     mc.add_argument("--currency", default="", help="币种")
+    mc.add_argument("--shares-src", default="", help="股本来源凭证 (≥2 独立来源分号分隔, 如 '新浪;stockanalysis')")
+    mc.add_argument("--asof", default="", help="股本/股价数据日期 YYYY-MM-DD")
 
     # verify-valuation
     val = sub.add_parser("verify-valuation", help="验算估值指标")
@@ -425,7 +436,8 @@ Examples:
     args = parser.parse_args()
 
     if args.command == "verify-market-cap":
-        verify_market_cap(args.price, args.shares, args.reported, args.currency)
+        verify_market_cap(args.price, args.shares, args.reported, args.currency,
+                          args.shares_src, args.asof)
     elif args.command == "verify-valuation":
         verify_valuation(args.price, args.eps, args.bvps, args.fcf_per_share,
                         args.dividend, args.revenue_per_share)

@@ -174,6 +174,22 @@ else
   echo "[run] ⚠️ 未检测到 $DAILY_DIR/$TODAY-pm.md，请检查日志确认是否有报告未写入或文件名不同。"
 fi
 
+# ---- 报告估值凭据校验：出估值数字的标的必须带 总股本 ≥2来源 日期 ----
+# 防"市值=股价×总股本"错算默默进报告（历史：AAOI/云南锗业单源旧股本低估 30~40%）。
+if [ -f "$DAILY_DIR/$TODAY-pm.md" ]; then
+  echo "[run] 校验报告估值凭据（verify_reports.py）..."
+  set +e
+  python3 "$AB_DIR/tools/verify_reports.py" "$DAILY_DIR/$TODAY-pm.md"
+  VERIFY_RC=$?
+  set -e
+  if [ "$VERIFY_RC" -ne 0 ]; then
+    echo "[ERROR] 报告估值凭据校验未通过：存在出估值数字但缺 总股本/双源/日期 的标的，请补齐后重跑或人工修订。退出码置 1。" >&2
+    RC=1
+  else
+    echo "[run] ✅ 报告估值凭据校验通过"
+  fi
+fi
+
 # ---- 重估轮产物校验：触发重估则该轮必须把 trend-universe.md 更新到今天 ----
 if [ "$REVAL_FLAG" = "1" ]; then
   NEW_REVAL="$(grep -oE '上次重估[：:][[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$TREND_FILE" 2>/dev/null | head -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)"

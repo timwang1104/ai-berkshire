@@ -199,6 +199,65 @@ _TAG_STYLES: dict[str, str] = {
 }
 
 
+def _flatten_wechat_lists(soup: Any) -> None:
+    """把 <ol>/<ul> 拍平成手动编号的 <section>，规避微信编辑器重建列表的坏排版。
+
+    背景：通过 draft/add 直接传原生 `<ol><li>` 的 HTML，微信后台富文本编辑器
+    重建有序列表时会破坏结构——序号"1."单独成行、正文落到下一段、中间串出空序号
+    （实测文章出现过 1–6 编号里 2/4/6 为空项）。这里在样式注入后遍历列表，
+    每条目录生成一个独立 `<section>`，行首用 `<span>` 写死 "1. " / "• " 作为序号，
+    不再依赖微信自己的列表组件渲染序号。
+    """
+    item_style = _WX_SECTION_STYLE + "margin:4px 0;"
+
+    def _emit_sub_items(li: Any, prefix: str, parent_sec: Any, soup_any: Any) -> None:
+        for sub in li.find_all("li", recursive=False):
+            sub_sec = soup_any.new_tag("section")
+            sub_sec["style"] = item_style + "padding-left:18px;"
+            sp = soup_any.new_tag("span")
+            sp.string = prefix
+            sp["style"] = "color:#111;"
+            sub_sec.append(sp)
+            for c in list(sub.children):
+                sub_sec.append(c.extract())
+            parent_sec.append(sub_sec)
+
+    for list_tag in ("ol", "ul"):
+        for lst in list(soup.find_all(list_tag)):
+            items = [li for li in lst.find_all("li", recursive=False)]
+            if not items:
+                lst.decompose()
+                continue
+            parent = lst.parent
+            try:
+                idx = [el for el in parent.contents].index(lst)
+            except ValueError:
+                continue
+            pieces: list[Any] = []
+            for i, li in enumerate(items, start=1):
+                sec = soup.new_tag("section")
+                sec["style"] = item_style
+                span = soup.new_tag("span")
+                if list_tag == "ol":
+                    span.string = f"{i}. "
+                    span["style"] = "font-weight:bold;color:#111;"
+                else:
+                    span.string = "• "
+                    span["style"] = "color:#07c160;"
+                sec.append(span)
+                for child in list(li.children):
+                    if getattr(child, "name", None) in ("ol", "ul"):
+                        _emit_sub_items(li, f"{i}.1 " if child.name == "ol" else "- ",
+                                        sec, soup)
+                    else:
+                        sec.append(child.extract())
+                pieces.append(sec)
+            for p in pieces:
+                parent.insert(idx, p)
+                idx += 1
+            lst.decompose()
+
+
 def markdown_to_wechat_html(
     md_text: str,
     base_dir: Path,
@@ -222,6 +281,11 @@ def markdown_to_wechat_html(
             existing = node.get("style", "")
             node["style"] = (style + existing) if existing else style
     # 表格嵌套 style 自动去 px 前的空格等不处理，微信接受这种写法
+
+    # 有序/无序列表拍平：微信编辑器重建原生 <ol>/<li> 时会把"序号+正文"拆开、
+    # 串出空序号（实测：API 草稿发布后出现 "1.空行→正文、2/4/6 空项" 的坏排版），
+    # 故拍平成手动编号的 <section>，行首直接写数字/"•"，绕开微信列表组件。
+    _flatten_wechat_lists(soup)
 
     # 本地图片 -> 上传换取线上 URL（正文图片必须为 http url）
     for img in soup.find_all("img"):
