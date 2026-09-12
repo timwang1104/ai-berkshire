@@ -689,6 +689,50 @@ REM 可选：安装 Codex slash prompts
 
 ---
 
+## 自动发布到微信公众号
+
+供应链瓶颈扫描报告（每周五扫描）可以自动改写为公众号文章并创建草稿（人工确认后发布），无需手动复制粘贴。
+
+**管线**：`reports/供应链瓶颈/daily/*-pm.md`（每周扫描产出）→ `scripts/publish-scan-daily.sh`（claude 用 `wechat-article` skill 改写）→ `tools/wechat_mp_publish.py`（官方草稿箱 API）→ 公众号后台人工确认发布。
+
+### 前置条件（一次性）
+
+1. 公众号为**认证服务号 / 认证订阅号**（个人未认证订阅号无草稿箱接口权限，需走浏览器自动化路线）。权限自查：后台「设置与开发 → 接口权限」搜「草稿箱」「发布能力」。
+2. 后台「设置与开发 → 基本配置」获取 AppID / AppSecret，把脚本运行机 IP 加入 **IP 白名单**。
+3. 复制 `.env.example` 为 `.env`，填入凭证（`.env` 已被 .gitignore 排除，不会入库）。
+
+### 使用
+
+```bash
+# 校验凭证与接口权限
+bash scripts/publish-scan-daily.sh --check
+
+# 将最新一份扫描报告改写并建草稿（默认不发布，人工确认）
+bash scripts/publish-scan-daily.sh
+
+# 指定日期 / 建草稿后直接发布（慎用）
+bash scripts/publish-scan-daily.sh --date 2026-09-04
+bash scripts/publish-scan-daily.sh --publish
+
+# 只做 Markdown->HTML 转换，不调用微信接口
+python3 tools/wechat_mp_publish.py --article 任意文章.md --dry-run
+```
+
+### 定时联动
+
+每周五扫描 cron（21:00）跑完后，可加一条发布 cron（错开扫描耗时，如 21:45）：
+
+```
+45 21 * * 5 bash /home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire/scripts/publish-scan-daily.sh >> /tmp/publish_scan_daily_cron.log 2>&1
+```
+
+产出文件：
+- 改写文章：`reports/供应链瓶颈/公众号文章/公众号-瓶颈猎手日报-{日期}.md`
+- 日志：`ai-berkshire/logs/publish-scan-daily-{日期}.log`
+- 草稿记录：`ai-berkshire/local/wechat_mp/last_draft.json`
+
+---
+
 ## 免责声明
 
 本项目仅供学习和研究目的，不构成任何投资建议。投资有风险，决策需谨慎。请始终做好自己的尽职调查（DYOR）。
