@@ -5,7 +5,8 @@ argument-hint: $ARGUMENTS
 
 Use the installed AI Berkshire Codex skill `private-company-research` for this request.
 
-If the skill is not already loaded, read and follow `~/ai-berkshire/codex-skills/private-company-research/SKILL.md`.
+If the skill is not already loaded, read and follow `codex-skills/private-company-research/SKILL.md` under the ai-berkshire checkout root
+(it is a submodule of the vnpy repo; AGENTS.md records the local path).
 
 User arguments:
 $ARGUMENTS

@@ -43,6 +43,9 @@ def prompt_for(source: Path) -> str:
     _, body = split_frontmatter(source_text)
     title = first_heading(body, name)
     description = f"AI Berkshire slash entry for {title}."
+    # 路径用「相对 checkout 根目录」的写法，不写死绝对路径：
+    # 本仓库会被别人 clone，把本机路径（也曾经是错的 `~/ai-berkshire/`）
+    # 生成进 20+ 个公开文件里对谁都没用。绝对路径由 AGENTS.md 记载。
     return (
         "---\n"
         f"description: {yaml_quote(description)}\n"
@@ -50,7 +53,8 @@ def prompt_for(source: Path) -> str:
         "---\n\n"
         f"Use the installed AI Berkshire Codex skill `{name}` for this request.\n\n"
         f"If the skill is not already loaded, read and follow "
-        f"`~/ai-berkshire/codex-skills/{name}/SKILL.md`.\n\n"
+        f"`codex-skills/{name}/SKILL.md` under the ai-berkshire checkout root\n"
+        "(it is a submodule of the vnpy repo; AGENTS.md records the local path).\n\n"
         "User arguments:\n"
         "$ARGUMENTS\n"
     )
