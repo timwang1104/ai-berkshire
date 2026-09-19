@@ -13,6 +13,7 @@
 
 用法：
     python3 tools/wechat_mp_publish.py --article 文章.md [--cover auto|封面.png] [--publish] [--env .env] [--dry-run]
+    python3 tools/wechat_mp_publish.py --article 文章.md --update-draft <media_id>   # 就地覆盖已有草稿
     python3 tools/wechat_mp_publish.py --check [--env .env]      # 只验证凭证与接口权限
 
 配置（--env 指定的 .env 文件，或环境变量；.env 已被仓库 .gitignore 排除）：
@@ -529,6 +530,40 @@ def create_draft(
     return str(data["media_id"])
 
 
+def update_draft(
+    access_token: str,
+    draft_media_id: str,
+    title: str,
+    digest: str,
+    content_html: str,
+    thumb_media_id: str,
+    author: str = "",
+    source_url: str = "",
+    index: int = 0,
+) -> str:
+    """就地覆盖已有草稿的第 index 篇，返回同一个草稿 media_id。
+
+    用于「文章改完重新推送」：避免 draft/add 在草稿箱里留下多份同名草稿，
+    其中夹着已过期的数据（2026-09-19 修数据时就踩过这个坑）。
+    """
+    article = {
+        "title": _truncate_utf8(title, 64),
+        "author": _truncate_utf8(author, 8) if author else "",
+        "digest": _truncate_utf8(digest, 120) if digest else "",
+        "content": content_html,
+        "content_source_url": source_url,
+        "thumb_media_id": thumb_media_id,
+        "need_open_comment": 1,
+        "only_fans_can_comment": 0,
+    }
+    api_post(
+        "/cgi-bin/draft/update",
+        access_token,
+        {"media_id": draft_media_id, "index": index, "articles": article},
+    )
+    return draft_media_id
+
+
 def publish_draft(access_token: str, draft_media_id: str) -> str:
     """发布草稿（freepublish/submit），返回 publish_id。"""
     data = api_post("/cgi-bin/freepublish/submit", access_token, {"media_id": draft_media_id})
@@ -543,6 +578,13 @@ def main() -> int:
     parser.add_argument("--article", type=str, help="Markdown 文章路径")
     parser.add_argument("--cover", type=str, default="auto", help="封面图路径或 auto（默认 auto 生成）")
     parser.add_argument("--publish", action="store_true", help="建草稿后直接发布（默认只建草稿，人工确认）")
+    parser.add_argument(
+        "--update-draft",
+        type=str,
+        default=None,
+        metavar="MEDIA_ID",
+        help="就地覆盖已有草稿（取 local/wechat_mp/last_draft.json 的 draft_media_id），而非新建一份",
+    )
     parser.add_argument("--env", type=str, default=None, help=".env 配置文件路径（默认 {repo}/.env）")
     parser.add_argument("--dry-run", action="store_true", help="只做 Markdown->HTML 转换，不调用微信接口")
     parser.add_argument("--check", action="store_true", help="只校验凭证/接口权限，不建草稿")
@@ -600,15 +642,30 @@ def main() -> int:
     thumb_media_id = ensure_cover_media_id(token, appid, title, args.cover)
     log(f"[3/4] 封面素材就绪 media_id={thumb_media_id}")
 
-    draft_media_id = create_draft(
-        token,
-        title=title,
-        digest=digest,
-        content_html=content_html,
-        thumb_media_id=thumb_media_id,
-        author=args.author,
-        source_url=args.source_url,
-    )
+    if args.update_draft:
+        draft_media_id = update_draft(
+            token,
+            args.update_draft,
+            title=title,
+            digest=digest,
+            content_html=content_html,
+            thumb_media_id=thumb_media_id,
+            author=args.author,
+            source_url=args.source_url,
+        )
+        log(f"[4/4] ✅ 草稿已就地覆盖 media_id={draft_media_id}")
+    else:
+        draft_media_id = create_draft(
+            token,
+            title=title,
+            digest=digest,
+            content_html=content_html,
+            thumb_media_id=thumb_media_id,
+            author=args.author,
+            source_url=args.source_url,
+        )
+        log(f"[4/4] ✅ 草稿已创建 media_id={draft_media_id}")
+
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
     (LOCAL_DIR / "last_draft.json").write_text(
         json.dumps(
@@ -625,7 +682,6 @@ def main() -> int:
         ),
         encoding="utf-8",
     )
-    log(f"[4/4] ✅ 草稿已创建 media_id={draft_media_id}")
     log(f"      → 请到公众号后台「草稿箱」人工确认后发布")
     log(f"      → 记录: {LOCAL_DIR / 'last_draft.json'}")
 
