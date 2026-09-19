@@ -18,6 +18,11 @@
 #   bash publish-scan-daily.sh --date 2026-09-04   # 指定日期
 #   bash publish-scan-daily.sh --publish       # 建草稿后立即正式发布（慎用）
 #   bash publish-scan-daily.sh --check         # 只校验凭证与接口权限
+#   bash publish-scan-daily.sh --allow-stale   # 放行"超过 2 天的旧日报"（默认拒绝）
+#
+# 退出码：
+#   0 = 成功   1 = 找不到日报   2 = 参数/凭证错误
+#   3 = 出口 IP 不在白名单   4 = 微信接口预检未通过   5 = 日报过旧被拒绝
 # ============================================================================
 set -euo pipefail
 
@@ -34,12 +39,14 @@ export PATH="/home/timwang/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 DATE="${1:-latest}"
 PUBLISH_FLAG=""
+ALLOW_STALE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --date) DATE="$2"; shift 2 ;;
     --publish) PUBLISH_FLAG="--publish"; shift ;;
     --check) CHECK_MODE=1; shift ;;
-    *) echo "未知参数: $1（支持 --date YYYY-MM-DD / --publish / --check）" >&2; exit 2 ;;
+    --allow-stale) ALLOW_STALE=1; shift ;;
+    *) echo "未知参数: $1（支持 --date YYYY-MM-DD / --publish / --check / --allow-stale）" >&2; exit 2 ;;
   esac
 done
 
@@ -82,8 +89,62 @@ fi
 
 NOW="$(date +'%Y-%m-%d %H:%M')"
 LOG_FILE="$LOG_DIR/publish-scan-daily-$REPORT_DATE.log"
+exec 9>&2   # 保存原始 stderr：预检消息要同时到终端（人工跑）和 cron 日志
 exec >> "$LOG_FILE" 2>&1
+
+# 预检消息同时写「管线日志」和「原始 stderr」。
+# 否则 exec 重定向之后，人工跑脚本只会看到非零退出码、看不到任何原因。
+say() {
+  for line in "$@"; do
+    printf '%s\n' "$line"
+    printf '%s\n' "$line" >&9
+  done
+}
+
+fail() {
+  local code="$1"; shift
+  say "$@"
+  exit "$code"
+}
+
 echo "===== 发布管线启动：$NOW 日报=$REPORT_FILE ====="
+
+# ---- 预检 1：日报新鲜度 ----
+# `latest` 取的是 daily/ 下最新的 *-pm.md。若本周扫描漏跑或还没跑完，latest 会
+# 指向上周的日报 —— 结果是建一份内容重复的草稿，并覆盖上周的文章文件。
+#
+# 阈值取 2 天而不是更宽：本条管线只在扫描完成后数小时内使用最新日报，一份 7 天
+# 前的日报意味着"本周扫描没产出"，而不是"这次想补发旧报告"。要发旧报告就显式
+# 用 --date 指定日期（守卫只作用于 latest），或加 --allow-stale。
+if [ "$DATE" = "latest" ] && [ "$ALLOW_STALE" != "1" ]; then
+  REPORT_TS="$(date -d "$REPORT_DATE" +%s 2>/dev/null || true)"
+  if [ -n "$REPORT_TS" ]; then
+    REPORT_AGE_DAYS=$(( ( $(date +%s) - REPORT_TS ) / 86400 ))
+    MAX_REPORT_AGE_DAYS="${MAX_REPORT_AGE_DAYS:-2}"
+    if [ "$REPORT_AGE_DAYS" -gt "$MAX_REPORT_AGE_DAYS" ]; then
+      fail 5 \
+        "[ERROR] 最新日报 $REPORT_DATE 距今 $REPORT_AGE_DAYS 天，超过 ${MAX_REPORT_AGE_DAYS} 天上限，拒绝执行。" \
+        "        通常意味着本周扫描漏跑，先查：logs/bottleneck-hunter-*.log 与 crontab。" \
+        "        如果确实要发这份旧日报，加 --allow-stale 或 --date 显式指定日期。"
+    fi
+    say "[preflight] ✅ 日报新鲜度正常（$REPORT_DATE，距今 $REPORT_AGE_DAYS 天）"
+  fi
+fi
+
+# ---- 预检 2：微信凭证与 API IP 白名单 ----
+# 必须放在耗时 3-8 分钟的 claude 改写之前：白名单过期时改写结果会全部作废，
+# 白白花掉一次模型调用和几分钟等待。
+set +e
+python3 "$AB_DIR/tools/wechat_mp_publish.py" --check --env "$AB_DIR/.env"
+CHECK_RC=$?
+set -e
+if [ "$CHECK_RC" -ne 0 ]; then
+  fail 4 \
+    "[ERROR] 微信接口预检未通过（退出码 $CHECK_RC），中止发布。" \
+    "        最常见原因：家庭宽带出口 IP 漂移，未在公众号 API IP 白名单内（40164）。" \
+    "        补救：按上面提示把该 IP 加入白名单（约 10 分钟生效）后重跑本命令。"
+fi
+say "[preflight] ✅ 凭证与 IP 白名单正常"
 
 # ---- 用 wechat-article skill 改写日报为公众号文章 ----
 ARTICLE_FILE="$ARTICLE_DIR/公众号-瓶颈猎手日报-$REPORT_DATE.md"

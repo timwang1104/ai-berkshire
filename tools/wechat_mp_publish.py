@@ -18,10 +18,19 @@
 配置（--env 指定的 .env 文件，或环境变量；.env 已被仓库 .gitignore 排除）：
     WECHAT_MP_APPID=wx...
     WECHAT_MP_SECRET=...
-    # 可选：正文图片/封面如需直传，把脚本运行机 IP 加入公众号后台 IP 白名单。
+    # 必需：公众号为认证服务号/订阅号，且把脚本运行机的出口 IP 加入
+    # 后台「API IP 白名单」（微信开发者平台 → 我的业务 → 公众号/服务号
+    # → 基础信息 → 开发信息）。家庭宽带的出口 IP 会漂移，漂出白名单后
+    # 所有接口返回 40164；此时本工具会打印补救步骤并记录漂移历史。
+
+退出码：
+    0 = 成功        1 = 已知失败（接口错误码 / 依赖缺失）
+    2 = 缺少凭证或参数错误        3 = 出口 IP 不在白名单（40164）
 
 说明：
     - token 缓存与封面素材缓存写入 {repo}/ai-berkshire/local/wechat_mp/（local/ 不入库）。
+    - 每次撞到 40164 会把观测到的出口 IP 追加到 local/wechat_mp/ip_history.log，
+      可用 scripts/wechat-ip-status.sh 查看漂移频率。
     - 只建草稿时不消耗"群发"次数；草稿出现在公众号后台「草稿箱」，人工确认后点发布即可。
 """
 
@@ -55,6 +64,70 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
+# ---------------------------------------------------------------------------
+# API IP 白名单（errcode 40164）
+#
+# 家宽出口 IP 会漂移，漂出白名单后所有服务端接口都会返回 40164。原始 errmsg
+# 把新 IP 埋在一长串文本中，人工排查要翻日志；这里把它提取出来，直接给出
+# 可执行的补救步骤，并追加到漂移历史供后续决策（例如是否改用固定出口）。
+# ---------------------------------------------------------------------------
+ERR_IP_NOT_IN_WHITELIST = 40164
+IP_HISTORY_FILE = LOCAL_DIR / "ip_history.log"
+
+
+class IPNotAllowedError(RuntimeError):
+    """出口 IP 不在公众号 API IP 白名单内（errcode 40164）。"""
+
+
+def _extract_ip(errmsg: str) -> str:
+    """从 errmsg 中提取被拒的出口 IP。
+
+    形如: invalid ip 183.193.56.84 ipv6 ::ffff:183.193.56.84, not in whitelist
+    """
+    match = re.search(r"invalid ip\s+([0-9a-fA-F.:]+)", errmsg or "")
+    return match.group(1) if match else ""
+
+
+def record_ip_event(ip: str, status: str, note: str = "") -> None:
+    """把一次出口 IP 观测追加到漂移历史（local/ 不入库）。"""
+    try:
+        LOCAL_DIR.mkdir(parents=True, exist_ok=True)
+        line = f"{time.strftime('%Y-%m-%d %H:%M:%S')}\t{ip or '?'}\t{status}"
+        if note:
+            line += f"\t{note}"
+        with IP_HISTORY_FILE.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError:
+        pass  # 记录失败不应影响主流程
+
+
+def ip_whitelist_help(ip: str) -> str:
+    """构造 IP 白名单未放行时的可执行提示。"""
+    shown = ip or "(未能从响应中解析出 IP)"
+    return "\n".join(
+        [
+            f"出口 IP {shown} 不在公众号 API IP 白名单内（errcode 40164）。",
+            "  ① 打开微信开发者平台 developers.weixin.qq.com/platform",
+            "     → 我的业务 → 公众号/服务号 → 基础信息 → 开发信息 → API IP 白名单",
+            f"  ② 添加 {shown}（保存后约 10 分钟生效）",
+            "  ③ 重跑刚才的命令，例如：",
+            "     bash ai-berkshire/scripts/publish-scan-daily.sh",
+            f"  漂移历史：{IP_HISTORY_FILE}",
+        ]
+    )
+
+
+def _raise_api_error(data: dict) -> None:
+    """统一处理微信错误码：40164 转成带操作指引的异常。"""
+    errcode = data.get("errcode")
+    errmsg = str(data.get("errmsg", ""))
+    if errcode == ERR_IP_NOT_IN_WHITELIST:
+        ip = _extract_ip(errmsg)
+        record_ip_event(ip, "REJECTED", "40164 未在白名单")
+        raise IPNotAllowedError(ip_whitelist_help(ip))
+    raise RuntimeError(f"微信接口错误 {errcode}: {errmsg}")
+
+
 def _parse_resp(resp: requests.Response) -> dict:
     """解析微信响应 JSON。
 
@@ -75,7 +148,7 @@ def api_get(path: str, params: dict) -> dict:
     resp = requests.get(f"{API_HOST}{path}", params=params, timeout=30)
     data = _parse_resp(resp)
     if data.get("errcode"):
-        raise RuntimeError(f"微信接口错误 {data.get('errcode')}: {data.get('errmsg')}")
+        _raise_api_error(data)
     return data
 
 
@@ -93,7 +166,7 @@ def api_post(path: str, access_token: str, json_body: dict) -> dict:
     )
     data = _parse_resp(resp)
     if data.get("errcode"):
-        raise RuntimeError(f"微信接口错误 {data.get('errcode')}: {data.get('errmsg')}")
+        _raise_api_error(data)
     return data
 
 
@@ -107,7 +180,7 @@ def api_upload(path: str, access_token: str, file_field: str, file_path: Path) -
         )
     data = _parse_resp(resp)
     if data.get("errcode"):
-        raise RuntimeError(f"微信接口错误 {data.get('errcode')}: {data.get('errmsg')}")
+        _raise_api_error(data)
     return data
 
 
@@ -564,4 +637,13 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except IPNotAllowedError as exc:
+        # 40164：出口 IP 漂出白名单。给出可执行指引，退出码 3 便于上层脚本区分。
+        log(f"[ERROR] {exc}")
+        sys.exit(3)
+    except RuntimeError as exc:
+        # 其余已知失败（接口错误码、Pillow 缺失等）：给一行干净原因，不打整段 traceback。
+        log(f"[ERROR] {exc}")
+        sys.exit(1)
