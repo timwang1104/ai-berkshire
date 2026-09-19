@@ -270,7 +270,7 @@ Claude CodeユーザーでmacOS / Linuxの場合：
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 
 # skillをClaude Codeグローバルコマンドディレクトリにコピー
 cd ai-berkshire
@@ -280,7 +280,7 @@ cd ai-berkshire
 Claude CodeユーザーでWindows PowerShell / コマンドプロンプトの場合：
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-claude-commands.bat
 ```
@@ -289,7 +289,7 @@ CodexユーザーでmacOS / Linuxの場合：
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 
 # Codex skillsを生成して ~/.codex/skills にインストール
 cd ai-berkshire
@@ -303,7 +303,7 @@ cd ai-berkshire
 CodexユーザーでWindows PowerShell / コマンドプロンプトの場合：
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-codex-skills.bat
 
@@ -702,4 +702,4 @@ MIT License
 
 このプロジェクトが役に立った方は、ぜひStarをお願いします！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xbtlin/ai-berkshire&type=Date)](https://star-history.com/#xbtlin/ai-berkshire&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=timwang1104/ai-berkshire&type=Date)](https://star-history.com/#timwang1104/ai-berkshire&Date)

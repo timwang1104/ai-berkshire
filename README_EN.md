@@ -268,7 +268,7 @@ For Claude Code users on macOS / Linux:
 
 ```bash
 # Clone the repository
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 
 # Copy skills to Claude Code global commands directory
 cd ai-berkshire
@@ -278,7 +278,7 @@ cd ai-berkshire
 For Claude Code users on Windows PowerShell / Command Prompt:
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-claude-commands.bat
 ```
@@ -287,7 +287,7 @@ For Codex users on macOS / Linux:
 
 ```bash
 # Clone the repository
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 
 # Generate and install Codex skills to ~/.codex/skills
 cd ai-berkshire
@@ -301,7 +301,7 @@ cd ai-berkshire
 For Codex users on Windows PowerShell / Command Prompt:
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/timwang1104/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-codex-skills.bat
 
@@ -700,4 +700,4 @@ MIT License
 
 If this project has been helpful to you, please give it a Star!
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xbtlin/ai-berkshire&type=Date)](https://star-history.com/#xbtlin/ai-berkshire&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=timwang1104/ai-berkshire&type=Date)](https://star-history.com/#timwang1104/ai-berkshire&Date)

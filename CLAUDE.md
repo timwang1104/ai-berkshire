@@ -3,7 +3,7 @@
 ## 项目概述
 
 基于 Claude Code 的价值投资研究 Skill 合集。四大师框架：巴菲特、芒格、段永平、李录。
-GitHub: xbtlin/ai-berkshire
+GitHub: timwang1104/ai-berkshire（自 timwang1104 的 fork；原版上游 xbtlin/ai-berkshire 已不再跟踪）
 
 ## 项目结构
 
@@ -113,20 +113,24 @@ reports/公司研究/{公司名}/
 
 ## GitHub 操作
 
-- 本地克隆路径：`~/ai-berkshire/`
-- 远程仓库：`https://github.com/xbtlin/ai-berkshire.git`
-- 推送前先 `git pull --rebase origin main`（远程经常有新提交）
+- 检出路径：本仓库是 vnpy 仓库的子模块，位于 `vnpy/ai-berkshire/`
+  （本机绝对路径 `/home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire`）。
+  注意：**不存在** `~/ai-berkshire/` 这个目录。
+- 远程仓库：`git@github.com:timwang1104/ai-berkshire.git`（origin，走 SSH）
+  - 推送用 SSH，密钥 `~/.ssh/id_ed25519_github`，经 `ssh.github.com:443` 连接。
+    本机没有配置任何 HTTPS credential helper，`https://` 形式的 origin 会让
+    git 因无法交互式索要用户名而直接失败（`could not read Username`）。
+  - 原版上游 `xbtlin/ai-berkshire` **已不再跟踪**（upstream remote 已移除）。
+- 这是个人 fork，只有你自己往里推，所以**不需要**推送前 `git pull --rebase`
 - commit message 用中文，描述清楚改了什么
 - 不要推送中间过程文件（如 data_collection.md），只推最终报告
 
 ## 常用命令
 
 ```bash
-# 推送报告到GitHub
-cd ~/ai-berkshire
+# 推送报告到GitHub（在 vnpy/ai-berkshire/ 下执行）
 git add reports/xxx.md
 git commit -m "添加xxx报告"
-git pull --rebase origin main
 git push origin main
 ```
 

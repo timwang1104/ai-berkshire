@@ -34,8 +34,10 @@ validation tools. Keep compatibility with both Claude Code and Codex users.
 - For Codex-only hand-written packages under `codex-skills/`, keep them clearly
   marked as Codex-only and do not create a same-named `skills/*.md` file unless
   intentionally adopting the workflow for Claude Code too.
-- Keep tool paths compatible with the documented checkout path:
-  `~/ai-berkshire/tools/...`
+- Keep tool paths compatible with the documented checkout path: this repo is a
+  submodule of the `vnpy` checkout, so it lives at `vnpy/ai-berkshire/`
+  (`/home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire`).
+  There is no `~/ai-berkshire/` directory.
 - Keep `CLAUDE.md` for Claude Code behavior and this `AGENTS.md` for Codex
   behavior.
 
