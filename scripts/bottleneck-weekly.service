@@ -1,0 +1,34 @@
+# 瓶颈猎手周报流水线（扫描 → 建公众号草稿）
+#
+# 与同目录 bottleneck-weekly.timer 配对使用。
+# 为什么两步串成一条链、为什么不管扫描退出码都继续发布：见 bottleneck-weekly.sh 头部注释。
+#
+# 安装（user systemd，无需 sudo）：
+#   cp ai-berkshire/scripts/bottleneck-weekly.service ~/.config/systemd/user/
+#   cp ai-berkshire/scripts/bottleneck-weekly.timer   ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now bottleneck-weekly.timer
+#
+# 手动补跑（某周漏了时）：
+#   systemctl --user start bottleneck-weekly.service
+#   journalctl --user -u bottleneck-weekly.service -n 50 --no-pager
+#
+# 关于唤醒：WakeSystem= 只有系统级 timer 支持。man systemd.timer 明示
+#   "this functionality requires privileges and is thus generally only
+#    available in the system service manager"
+# 本机没有免密 sudo，故采用「用户级 timer + Persistent=true」：
+#   - 睡眠期间错过的触发点：唤醒后由 systemd 重新评估 OnCalendar 补触发
+#   - 关机期间错过的触发点：由 Persistent=true 在下次启动时补触发
+# 代价是"不保证周五 21:00 那一刻跑"，而是"下一次机器醒来就跑"。
+
+[Unit]
+Description=瓶颈猎手周报流水线（扫描 → 建公众号草稿）
+Documentation=file:/home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire/scripts/bottleneck-weekly.sh
+
+[Service]
+Type=oneshot
+# 扫描 10-30 分钟 + 公众号改写 3-8 分钟；oneshot 默认不限时，这里给个明确上限
+TimeoutStartSec=2h
+ExecStart=/bin/bash /home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire/scripts/bottleneck-weekly.sh
+# 降低优先级，避免与 tbot 的盘中任务抢资源
+Nice=5

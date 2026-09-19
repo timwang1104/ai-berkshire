@@ -111,7 +111,7 @@ if [ -n "$LATEST_REPORT" ]; then
     AGE=$(( ( $(date +%s) - REPORT_TS ) / 86400 ))
     echo "      最新日报：$REPORT_DATE（距今 $AGE 天）"
     if [ "$AGE" -gt 10 ]; then
-      echo "      ⚠️  超过 10 天，说明扫描可能漏跑了（笔记本睡眠时 cron 不补跑）。"
+      echo "      ⚠️  超过 10 天，说明扫描可能漏跑了 —— 查 systemctl --user status bottleneck-weekly.timer"
     fi
     echo
   fi

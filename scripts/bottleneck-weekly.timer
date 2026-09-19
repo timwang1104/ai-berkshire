@@ -1,0 +1,22 @@
+# 每周五 21:00 触发瓶颈猎手周报流水线（扫描 → 建公众号草稿）
+#
+# 安装：见同目录 bottleneck-weekly.service 头部注释。
+#
+# Persistent=true 的作用：记录上次触发时间；若触发点落在"定时器未激活"的
+# 时间段内（关机、或机器睡着且 systemd 未补评估），下次激活时立刻补跑一次。
+# 它同时也保证连续睡过多周时只补触发一次（不会连发多份周报）。
+#
+# 注意 OnCalendar 的写法："Fri 21:00" 可被 systemd 解析，这里写成完整形式
+# 以免歧义；具体生效时间用 `systemctl --user list-timers` 核对。
+
+[Unit]
+Description=每周五 21:00 触发瓶颈猎手周报流水线
+
+[Timer]
+OnCalendar=Fri *-*-* 21:00:00
+Persistent=true
+AccuracySec=1min
+Unit=bottleneck-weekly.service
+
+[Install]
+WantedBy=timers.target

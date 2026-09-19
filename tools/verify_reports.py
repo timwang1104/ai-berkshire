@@ -11,7 +11,7 @@
   2. 全报告必须 ≥2  个独立数据来源（名单见 KNOWN_SOURCES）。
   3. 全报告必须 ≥1 个数据日期（YYYY-MM-DD）。
 
-任一违反 -> 列出问题并退出码 1（wrapper 据此把 cron 退出码置 1，暴露缺跑）。
+任一违反 -> 列出问题并退出码 1（wrapper 据此把定时任务退出码置 1，暴露缺跑）。
 
 用法:
     python3 tools/verify_reports.py <报告.md> [更多报告.md...]

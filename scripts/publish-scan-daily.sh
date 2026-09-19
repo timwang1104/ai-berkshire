@@ -89,7 +89,7 @@ fi
 
 NOW="$(date +'%Y-%m-%d %H:%M')"
 LOG_FILE="$LOG_DIR/publish-scan-daily-$REPORT_DATE.log"
-exec 9>&2   # 保存原始 stderr：预检消息要同时到终端（人工跑）和 cron 日志
+exec 9>&2   # 保存原始 stderr：预检消息要同时到终端（人工跑）和定时任务日志（journal）
 exec >> "$LOG_FILE" 2>&1
 
 # 预检消息同时写「管线日志」和「原始 stderr」。
@@ -124,7 +124,8 @@ if [ "$DATE" = "latest" ] && [ "$ALLOW_STALE" != "1" ]; then
     if [ "$REPORT_AGE_DAYS" -gt "$MAX_REPORT_AGE_DAYS" ]; then
       fail 5 \
         "[ERROR] 最新日报 $REPORT_DATE 距今 $REPORT_AGE_DAYS 天，超过 ${MAX_REPORT_AGE_DAYS} 天上限，拒绝执行。" \
-        "        通常意味着本周扫描漏跑，先查：logs/bottleneck-hunter-*.log 与 crontab。" \
+        "        通常意味着本周扫描漏跑，先查：logs/bottleneck-hunter-*.log，以及定时任务状态" \
+        "        systemctl --user status bottleneck-weekly.timer。" \
         "        如果确实要发这份旧日报，加 --allow-stale 或 --date 显式指定日期。"
     fi
     say "[preflight] ✅ 日报新鲜度正常（$REPORT_DATE，距今 $REPORT_AGE_DAYS 天）"

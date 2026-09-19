@@ -720,16 +720,40 @@ python3 tools/wechat_mp_publish.py --article 任意文章.md --dry-run
 
 ### 定时联动
 
-每周五扫描 cron（21:00）跑完后，可加一条发布 cron（错开扫描耗时，如 21:45）：
+每周五 21:00 由 **systemd user timer** 触发流水线 `scripts/bottleneck-weekly.sh`，
+它把「扫描 → 建草稿」串成一条链（先跑 `bottleneck-hunter-scan.sh`，再跑
+`publish-scan-daily.sh`）。安装（无需 sudo）：
 
+```bash
+cp ai-berkshire/scripts/bottleneck-weekly.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now bottleneck-weekly.timer
+systemctl --user list-timers bottleneck-weekly.timer     # 核对下次触发时间
 ```
-45 21 * * 5 bash /home/timwang/Documents/workspace/tradebot_workspace/vnpy/ai-berkshire/scripts/publish-scan-daily.sh >> /tmp/publish_scan_daily_cron.log 2>&1
+
+手动补跑某周（或只看计划不执行）：
+
+```bash
+systemctl --user start bottleneck-weekly.service
+journalctl --user -u bottleneck-weekly.service -n 50 --no-pager
+bash ai-berkshire/scripts/bottleneck-weekly.sh --dry-run
 ```
+
+**为什么用 systemd timer 而不是 cron**：vixie-cron 不会补跑睡眠期间错过的任务 ——
+2026-09-11 那一周的周报就是因为笔记本在 21:00 处于挂起而整周丢失、且无任何告警。
+systemd timer 睡眠期间错过的触发点会在唤醒后补触发，`Persistent=true` 再覆盖关机场景。
+（`WakeSystem=` 能定时唤醒机器，但 `man systemd.timer` 明示它只有系统级 timer 支持，
+本机无免密 sudo，故未启用。）
+
+**为什么串成一条链而不是两条定时任务**：两个独立触发点在"双双错过、唤醒后同时补触发"
+时会互相打架 —— 发布会先于本周报告产出而跑，撞上新鲜度守卫后静默丢弃当周草稿。
 
 产出文件：
 - 改写文章：`reports/供应链瓶颈/公众号文章/公众号-瓶颈猎手日报-{日期}.md`
 - 日志：`ai-berkshire/logs/publish-scan-daily-{日期}.log`
+- 流水线日志：`ai-berkshire/logs/bottleneck-weekly-{日期}.log`
 - 草稿记录：`ai-berkshire/local/wechat_mp/last_draft.json`
+- IP 漂移历史：`ai-berkshire/local/wechat_mp/ip_history.log`
 
 ---
 

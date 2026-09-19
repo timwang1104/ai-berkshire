@@ -2,7 +2,9 @@
 # ============================================================================
 # 每周供应链瓶颈扫描（bottleneck-hunter 定时任务）
 #
-# 由 cron 每周五 21:00 调用（见用户 crontab 中 # BEGIN bottleneck_hunter 段）：
+# 由 systemd user timer 每周五 21:00、经 scripts/bottleneck-weekly.sh 串联调用
+# （见同目录 bottleneck-weekly.{service,timer}）。2026-09-19 之前是 crontab，
+# 因 vixie-cron 不补跑睡眠期间错过的任务而弃用：2026-09-11 那周因此整周漏跑且无告警。
 #   0. 趋势清单时效前置检查（技能第〇·五步）：trend-universe.md 缺失或上次重估
 #      >30 天时，先强制执行"趋势清单月度重估"再进入信号扫描。
 #   1. 以 headless 模式调用 claude CLI，注入 bottleneck-hunter 技能指令，
@@ -26,7 +28,7 @@ LOG_DIR="$AB_DIR/logs"
 CLAUDE_BIN="/home/timwang/.local/bin/claude"
 LOCK_FILE="/tmp/bottleneck-hunter-scan.lock"
 
-# cron 环境 PATH 很窄，必须显式补全
+# 定时任务环境 PATH 很窄（cron 与 systemd user 环境皆然），必须显式补全
 export PATH="/home/timwang/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 # 让 ai-berkshire 的 tools/ 能调用 tbot 模块（见 CLAUDE.md）
 export PYTHONPATH="$REPO_ROOT/tbot:$AB_DIR${PYTHONPATH:+:$PYTHONPATH}"
@@ -62,7 +64,7 @@ if [ "${1:-}" = "--check" ]; then
   exit 0
 fi
 
-# ---- 全部输出进当日日志；cron 重定向只兜底脚本级早期错误 ----
+# ---- 全部输出进当日日志；调用方的重定向只兜底脚本级早期错误 ----
 exec >> "$LOG_FILE" 2>&1
 
 echo "===== bottleneck-hunter 每周扫描启动：$NOW ====="
