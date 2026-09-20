@@ -19,10 +19,12 @@
 #   bash publish-scan-daily.sh --publish       # 建草稿后立即正式发布（慎用）
 #   bash publish-scan-daily.sh --check         # 只校验凭证与接口权限
 #   bash publish-scan-daily.sh --allow-stale   # 放行"超过 2 天的旧日报"（默认拒绝）
+#   bash publish-scan-daily.sh --allow-lint    # 放行"日期绑定校验未过"的文章（默认拒绝）
 #
 # 退出码：
 #   0 = 成功   1 = 找不到日报   2 = 参数/凭证错误
 #   3 = 出口 IP 不在白名单   4 = 微信接口预检未通过   5 = 日报过旧被拒绝
+#   6 = 文章行情数字缺时点标记（claim_lint.py）
 # ============================================================================
 set -euo pipefail
 
@@ -40,13 +42,15 @@ export PATH="/home/timwang/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 DATE="${1:-latest}"
 PUBLISH_FLAG=""
 ALLOW_STALE=0
+ALLOW_LINT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --date) DATE="$2"; shift 2 ;;
     --publish) PUBLISH_FLAG="--publish"; shift ;;
     --check) CHECK_MODE=1; shift ;;
     --allow-stale) ALLOW_STALE=1; shift ;;
-    *) echo "未知参数: $1（支持 --date YYYY-MM-DD / --publish / --check / --allow-stale）" >&2; exit 2 ;;
+    --allow-lint) ALLOW_LINT=1; shift ;;
+    *) echo "未知参数: $1（支持 --date YYYY-MM-DD / --publish / --check / --allow-stale / --allow-lint）" >&2; exit 2 ;;
   esac
 done
 
@@ -219,6 +223,37 @@ echo "[run] ✅ 文章已生成：$ARTICLE_FILE（$(wc -l < "$ARTICLE_FILE") 行
 if [ ! -s "$ARTICLE_FILE" ]; then
   echo "[ERROR] 生成的文章为空，中止发布。" >&2
   exit 1
+fi
+
+# ---- 预检 3：行情数字的日期绑定 ----
+# 防"数字对、日期错"这类错误静静进稿。实例（2026-09-19 复核发现）：稿子写
+# "苹果 9/18 宣布涨价后股价大跌 6%"，而 AAPL 9/18 收 -0.26%，那 -6% 发生在 7/31
+# ——引证里的"金十 9/18"是来源发布日期，被当成了事件发生日期。多源交叉验证对
+# 这种"绑定错误"结构性失明（两个来源都会报 6%）。
+#
+# claim_lint.py 只看一件事：每条行情数字同句内是否自带可定位时点的标记。
+# 纯文本、零网络、零误报（15 条内嵌用例自检，见 --self-test）。
+# 卡在"改写已完成、尚未调微信接口"这一刻：此时才存在最终要推的产物。
+set +e
+LINT_OUT="$(python3 "$AB_DIR/tools/claim_lint.py" "$ARTICLE_FILE" 2>&1)"
+LINT_RC=$?
+set -e
+# 注意：本脚本第 97 行 `exec >> "$LOG_FILE" 2>&1` 之后，普通 stdout 只进管线日志
+# 文件，终端/journal 只剩 fd 9。claim_lint 的明细必须经 say() 走一次 fd 9，
+# 否则报错文案里的"见上"在终端上是空的（2026-09-19 集成测试当场暴露）。
+say "$LINT_OUT"
+if [ "$LINT_RC" -ne 0 ]; then
+  if [ "$ALLOW_LINT" = "1" ]; then
+    say "[preflight] ⚠️ 日期绑定校验未过，但 --allow-lint 已放行（本次推送带未验证的行情数字）"
+  else
+    fail 6 \
+      "[ERROR] 文章里的行情数字缺时点标记（明细见上），中止建草稿。" \
+      "        规则：每条涨跌/价格数字必须在同句内自带日期（9月18日）或明确基期的" \
+      "        周期词（本周/单周/同比）；只说「单日/盘中」不足以定位是哪一天。" \
+      "        修完文章重跑即可；确认要放行加 --allow-lint。"
+  fi
+else
+  say "[preflight] ✅ 行情数字日期绑定正常"
 fi
 
 # ---- 调官方 API 建草稿（默认不发布） ----
