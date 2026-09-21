@@ -10,13 +10,14 @@ reports/美团/command-log.jsonl
 # 雪球爬虫登录态缓存（含 cookies，本地使用）
 /tmp/xueqiu_state.json
 
-# ===== 音视频大文件不入库 =====
+# ===== 音视频/图片大文件不入库 =====
 # 如确需提交某个文件，用 git add -f 显式加入
 *.m4a
 *.mp3
 *.wav
 *.mp4
 *.mov
+*.png
 
 # ===== 本地资料区：不打算公开的文件放这个目录，永不入库 =====
 # API token（如 FinMind 的 local/finmind_token.txt）也放这里，只留本机
