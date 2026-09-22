@@ -643,17 +643,35 @@ def main() -> int:
     log(f"[3/4] 封面素材就绪 media_id={thumb_media_id}")
 
     if args.update_draft:
-        draft_media_id = update_draft(
-            token,
-            args.update_draft,
-            title=title,
-            digest=digest,
-            content_html=content_html,
-            thumb_media_id=thumb_media_id,
-            author=args.author,
-            source_url=args.source_url,
-        )
-        log(f"[4/4] ✅ 草稿已就地覆盖 media_id={draft_media_id}")
+        try:
+            draft_media_id = update_draft(
+                token,
+                args.update_draft,
+                title=title,
+                digest=digest,
+                content_html=content_html,
+                thumb_media_id=thumb_media_id,
+                author=args.author,
+                source_url=args.source_url,
+            )
+            log(f"[4/4] ✅ 草稿已就地覆盖 media_id={draft_media_id}")
+        except RuntimeError as exc:
+            # 40007 = media_id 已失效（草稿在后台被删除或已发布）。调用方常从
+            # local/wechat_mp/last_draft.json 取 id，那可能是个死指针；此时**回落新建**
+            # 而非硬失败，否则"改完文重推"会卡死（2026-09-20 实际遇到过）。
+            if "40007" not in str(exc):
+                raise
+            log("[4/4] ⚠️ --update-draft 的目标 media_id 已失效（40007），回落新建草稿")
+            draft_media_id = create_draft(
+                token,
+                title=title,
+                digest=digest,
+                content_html=content_html,
+                thumb_media_id=thumb_media_id,
+                author=args.author,
+                source_url=args.source_url,
+            )
+            log(f"[4/4] ✅ 草稿已新建 media_id={draft_media_id}")
     else:
         draft_media_id = create_draft(
             token,

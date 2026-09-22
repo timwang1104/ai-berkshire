@@ -192,6 +192,22 @@ if [ -f "$DAILY_DIR/$TODAY-pm.md" ]; then
   fi
 fi
 
+# ---- 发布合规预检（**只告警，不阻断**）----
+# 日报是内部研究底稿，允许保留操作结论与个股评级；但公众号稿由它改写而来，
+# 而模型有保留原文要素的天然倾向（2026-09 实证：连"上轮给的参考区间"都保留成了
+# "13.5至15美元"）。所以在**源头**就把会被闸门拦下的东西照出来，让人当场看到
+# "这句会传下去"，而不是等发布时才发现。
+#
+# 为什么不阻断：硬保证在 publish-scan-daily.sh 预检 4（exit 7，无放行开关）；
+# 且日报本就该保留判断。这里只做反馈，顺带为「命中率监控」提供数据。
+if [ -f "$DAILY_DIR/$TODAY-pm.md" ]; then
+  echo "[run] 发布合规预检（compliance_lint --warn-only，只告警不阻断）..."
+  set +e
+  python3 "$AB_DIR/tools/compliance_lint.py" --warn-only "$DAILY_DIR/$TODAY-pm.md"
+  set -e
+  echo "[run] （以上告警不影响本轮结果；处理方式见 skills/wechat-article.md『合规红线』）"
+fi
+
 # ---- 重估轮产物校验：触发重估则该轮必须把 trend-universe.md 更新到今天 ----
 if [ "$REVAL_FLAG" = "1" ]; then
   NEW_REVAL="$(grep -oE '上次重估[：:][[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$TREND_FILE" 2>/dev/null | head -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)"
